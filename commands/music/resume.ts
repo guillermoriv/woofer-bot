@@ -1,18 +1,17 @@
-import { EmbedBuilder } from "discord.js";
-import type { Command } from "../../types/command";
+import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import type { CommandWithProps } from "../../types/command";
 import { useQueue } from "discord-player";
 
 export default {
-  name: "resume",
-  description: "Resume the track",
+  data: new SlashCommandBuilder()
+    .setName("resume")
+    .setDescription("Resume the current track"),
   voiceChannel: true,
   async execute(interaction, _) {
-    await interaction.deferReply();
-
     const queue = useQueue(interaction.guild!);
     if (!queue) return interaction.editReply("No music is being played!?");
     if (!queue.node.isPlaying())
-      return interaction.editReply(
+      return interaction.reply(
         `The track is already running <${interaction.member}>... try again ? <❌>`,
       );
 
@@ -21,10 +20,10 @@ export default {
       .setAuthor({
         name: success
           ? `Current music <${queue.currentTrack?.title}> paused <✅>`
-          : `Something went wrong <${interaction.member?.user.username}>... try again ? <❌>`,
+          : `Something went wrong <${interaction.member}>... try again ? <❌>`,
       })
       .setColor("#2f3136");
 
-    return interaction.editReply({ embeds: [pauseEmbed] });
+    return interaction.reply({ embeds: [pauseEmbed] });
   },
-} as Command;
+} as CommandWithProps;

@@ -1,51 +1,42 @@
-import {
-  ApplicationCommandOptionType,
-  EmbedBuilder,
-  GuildMember,
-} from "discord.js";
-import type { Command } from "../../types/command";
+import { EmbedBuilder, GuildMember, SlashCommandBuilder } from "discord.js";
+import type { CommandWithProps } from "../../types/command";
 import { QueryType, useMainPlayer } from "discord-player";
 
 export default {
-  name: "play",
-  description: "Play a song from YouTube!",
+  data: new SlashCommandBuilder()
+    .setName("play")
+    .setDescription("Play a song from YouTube!")
+    .addStringOption((option) =>
+      option
+        .setName("song")
+        .setDescription("The song you want to play...")
+        .setRequired(true),
+    ),
   voiceChannel: true,
-  options: [
-    {
-      name: "song",
-      description: "The song you want to play...",
-      type: ApplicationCommandOptionType.String,
-      required: true,
-    },
-  ],
   async execute(interaction, client) {
     await interaction.deferReply();
 
     const player = useMainPlayer();
-    const optionSong = interaction.options.get("song", true);
 
-    if (!optionSong) {
-      return interaction.editReply("No song provided!");
-    }
+    const song = interaction.options.getString("song");
 
-    if (!optionSong.value) {
+    if (!song) {
       return interaction.editReply(
         "The value is not correct, please try again...?",
       );
     }
 
-    const song = optionSong.value.toString();
-
     const member = interaction.member as GuildMember;
+    const channel = member.voice.channel!;
 
-    const res = await player.search(song, {
+    const result = await player.search(song, {
       requestedBy: member,
       searchEngine: QueryType.AUTO,
     });
 
     let defaultEmbed = new EmbedBuilder().setColor("#2f3136");
 
-    if (!res?.tracks.length) {
+    if (!result.hasTracks()) {
       defaultEmbed.setAuthor({
         name: "No results found... try again ? <❌>",
       });
@@ -53,14 +44,23 @@ export default {
     }
 
     try {
-      const { track } = await player.play(member.voice.channel!, song, {
+      const { track } = await player.play(channel, result, {
         nodeOptions: {
           metadata: interaction,
-          volume: 50,
+          repeatMode: 0,
+          noEmitInsert: true,
+          leaveOnStop: false,
           leaveOnEmpty: true,
-          leaveOnEmptyCooldown: 30000,
+          leaveOnEmptyCooldown: 60000,
           leaveOnEnd: true,
-          leaveOnEndCooldown: 30000,
+          leaveOnEndCooldown: 60000,
+          pauseOnEmpty: true,
+          preferBridgedMetadata: true,
+          disableBiquad: true,
+        },
+        requestedBy: member,
+        connectionOptions: {
+          deaf: true,
         },
       });
 
@@ -77,4 +77,4 @@ export default {
       return interaction.editReply({ embeds: [defaultEmbed] });
     }
   },
-} as Command;
+} as CommandWithProps;

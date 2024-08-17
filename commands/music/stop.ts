@@ -1,18 +1,17 @@
-import { EmbedBuilder } from "discord.js";
-import type { Command } from "../../types/command";
+import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import type { CommandWithProps } from "../../types/command";
 import { useQueue } from "discord-player";
 
 export default {
-  name: "stop",
-  description: "Stop the current song",
+  data: new SlashCommandBuilder()
+    .setName("stop")
+    .setDescription("Stop the current track"),
   voiceChannel: true,
   async execute(interaction, _) {
-    await interaction.deferReply();
-
     const queue = useQueue(interaction.guild!);
     if (!queue?.node.isPlaying())
-      return interaction.editReply(
-        `No music currently playing <${interaction.member?.user.username}>... try again ? <❌>`,
+      return interaction.reply(
+        `No music currently playing <${interaction.member}>... try again ? <❌>`,
       );
 
     queue.delete();
@@ -21,6 +20,6 @@ export default {
       name: "Music stopped into this server, see you next time <✅>",
     });
 
-    return interaction.editReply({ embeds: [embed] });
+    return interaction.reply({ embeds: [embed] });
   },
-} as Command;
+} as CommandWithProps;

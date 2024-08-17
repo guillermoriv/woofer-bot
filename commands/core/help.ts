@@ -1,11 +1,9 @@
 import { SlashCommandBuilder } from "discord.js";
 import { EmbedBuilder } from "discord.js";
 import { commands } from "../../index";
-import type { Command } from "../../types/command";
+import type { CommandWithProps } from "../../types/command";
 
 export default {
-  name: "help",
-  description: "All the commands this bot has!",
   data: new SlashCommandBuilder()
     .setName("help")
     .setDescription("All the commands this bot has!"),
@@ -20,14 +18,14 @@ export default {
       .addFields([
         {
           name: `Enabled - ${commands.size}`,
-          value: commands.map((x) => `\`${x.name}\``).join(" | "),
+          value: commands.map((x) => `\`${x.data.name}\``).join(" | "),
         },
       ])
       .setTimestamp()
       .setFooter({
-        text: "Music comes first - Made with heart by the Community <❤️>",
+        text: "Music is great with friends - made with hearth by @guillermoriv",
       });
 
     return interaction.reply({ embeds: [embed] });
   },
-} as Command;
+} as CommandWithProps;
