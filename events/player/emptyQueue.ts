@@ -4,9 +4,8 @@ import { EmbedBuilder } from "discord.js";
 export default (queue: GuildQueue) => {
   const embed = new EmbedBuilder()
     .setAuthor({
-      name: "No tracks have been playing for the past 3 minutes, leaving <❌>",
+      name: "No more songs in the queue! <❌>",
     })
-    .setDescription("The bot has exit the channel due to inactivity.")
     .setColor("#EE4B2B");
 
   (queue.metadata as any).channel.send({

@@ -1,15 +1,16 @@
-import {
-  CommandInteraction,
-  SlashCommandBuilder,
-  Client,
-  type ApplicationCommandOption,
-} from "discord.js";
+import { CommandInteraction, SlashCommandBuilder, Client } from "discord.js";
+import type { SlashCommandProps } from "commandkit";
+
+type InteractionType = SlashCommandProps["interaction"];
 
 export interface Command {
-  name: string;
-  description: string;
   data: SlashCommandBuilder;
   voiceChannel?: boolean;
-  options?: ApplicationCommandOption[];
   execute: (interaction: CommandInteraction, client: Client) => Promise<any>;
+}
+
+export interface CommandWithProps {
+  data: SlashCommandBuilder;
+  voiceChannel?: boolean;
+  execute: (interaction: InteractionType, client: Client) => Promise<any>;
 }

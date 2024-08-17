@@ -6,9 +6,11 @@ import {
   Routes,
   EmbedBuilder,
   InteractionType,
+  type RESTPostAPIApplicationCommandsJSONBody,
+  ActivityType,
 } from "discord.js";
 import { readdirSync } from "node:fs";
-import { CLIENT_ID, TOKEN } from "./constants";
+import { CLIENT_ID, TOKEN, YOUTUBE_COOKIE } from "./constants";
 import { GuildQueueEvent, Player, useQueue } from "discord-player";
 import type { Command } from "./types/command";
 
@@ -26,12 +28,18 @@ const client = new Client({
   ],
 });
 
-const commandsArray: Command[] = [];
+const commandsArray: RESTPostAPIApplicationCommandsJSONBody[] = [];
 
 const player = new Player(client, {
+  skipFFmpeg: false,
   ytdlOptions: {
     quality: "highestaudio",
     highWaterMark: 1 << 25,
+    requestOptions: {
+      headers: {
+        cookie: YOUTUBE_COOKIE,
+      },
+    },
   },
 });
 
@@ -39,7 +47,7 @@ const playerEvents = readdirSync("./events/player/").filter((file) =>
   file.endsWith(".ts"),
 );
 
-player.extractors.loadDefault();
+await player.extractors.loadDefault();
 
 for (const file of playerEvents) {
   const eventName = file.split(".")[0] as GuildQueueEvent;
@@ -72,12 +80,16 @@ for (const dir of commandDirs) {
     const commandModulePath = `./commands/${dir}/${file}`;
 
     try {
-      const { default: command } = await import(commandModulePath);
+      const { default: command } = (await import(commandModulePath)) as {
+        default: Command;
+      };
 
-      if (command.name && command.description) {
-        commandsArray.push(command);
-        console.log(`< -> > [Loaded Command] <${command.name.toLowerCase()}>`);
-        commands.set(command.name.toLowerCase(), command);
+      if ("data" in command && "execute" in command) {
+        commandsArray.push(command.data.toJSON());
+        console.log(
+          `< -> > [Loaded Command] <${command.data.name.toLowerCase()}>`,
+        );
+        commands.set(command.data.name.toLowerCase(), command);
       } else {
         console.log(`< -> > [Failed Command] <${file}>`);
       }
@@ -93,11 +105,7 @@ for (const dir of commandDirs) {
 try {
   console.log("Started refreshing application (/) commands.");
   await rest.put(Routes.applicationCommands(CLIENT_ID), {
-    body: commandsArray.map((c) => ({
-      name: c.name,
-      description: c.description,
-      options: c.options,
-    })),
+    body: commandsArray,
   });
   console.log("Successfully reloaded application (/) commands.");
 } catch (error) {
@@ -106,7 +114,7 @@ try {
 
 client.on("ready", (client) => {
   console.log(`Logged in as ${client.user.tag}!`);
-  client.user.setActivity("Playing some cool music!");
+  client.user.setActivity({ type: ActivityType.Listening, name: "music 🎵" });
 });
 
 client.on("interactionCreate", async (interaction) => {

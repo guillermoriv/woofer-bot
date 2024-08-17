@@ -6,12 +6,16 @@
     "@types/bun": "latest",
     "@types/ms": "^0.7.34"
   },
+  "scripts": {
+    "start": "bun run index.ts"
+  },
   "peerDependencies": {
     "typescript": "^5.5.4"
   },
   "dependencies": {
     "@discord-player/extractor": "^4.5.1",
     "@distube/ytdl-core": "^4.14.4",
+    "commandkit": "^0.1.10",
     "discord-player": "^6.7.1",
     "discord.js": "^14.15.3",
     "ffmpeg-static": "^5.2.0",
