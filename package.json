@@ -15,6 +15,7 @@
   "dependencies": {
     "@discord-player/extractor": "^4.5.1",
     "@distube/ytdl-core": "^4.14.4",
+    "@evan/opus": "^1.0.3",
     "commandkit": "^0.1.10",
     "discord-player": "^6.7.1",
     "discord.js": "^14.15.3",
