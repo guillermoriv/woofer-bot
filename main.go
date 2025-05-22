@@ -20,6 +20,7 @@ type Pair struct {
 var usedCommands []Pair = []Pair{
 	{command: commands.PingCommand, commandHandler: commands.PingHandler},
 	{command: commands.PlayCommand, commandHandler: commands.PlayHandler},
+	{command: commands.StopCommand, commandHandler: commands.StopHandler},
 }
 
 func main() {

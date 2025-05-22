@@ -1,14 +1,26 @@
 package music
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"container/list"
+	"context"
+	"sync"
 
-type Track struct{}
+	"github.com/bwmarrin/discordgo"
+)
+
+type Track struct {
+	Title    string
+	Duration int
+	AudioURL string
+}
 
 type GuildMusicPlayer struct {
-	Queue      []Track
+	Queue      *list.List
 	NowPlaying *Track
+	Playing    bool
 	VoiceConn  *discordgo.VoiceConnection
-	StopChan   chan struct{}
+	CancelFunc context.CancelFunc
+	Mutex      sync.Mutex
 }
 
 var GuildPlayers = make(map[string]*GuildMusicPlayer)
@@ -17,7 +29,7 @@ func GetOrCreatePlayer(guildID string) *GuildMusicPlayer {
 	player, ok := GuildPlayers[guildID]
 
 	if !ok {
-		player = &GuildMusicPlayer{}
+		player = &GuildMusicPlayer{Queue: list.New(), Mutex: sync.Mutex{}, NowPlaying: nil, VoiceConn: nil}
 		GuildPlayers[guildID] = player
 	}
 
