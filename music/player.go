@@ -29,7 +29,7 @@ func GetOrCreatePlayer(guildID string) *GuildMusicPlayer {
 	player, ok := GuildPlayers[guildID]
 
 	if !ok {
-		player = &GuildMusicPlayer{Queue: list.New(), Mutex: sync.Mutex{}, NowPlaying: nil, VoiceConn: nil}
+		player = &GuildMusicPlayer{Queue: list.New(), Mutex: sync.Mutex{}, NowPlaying: nil, VoiceConn: nil, CancelFunc: nil}
 		GuildPlayers[guildID] = player
 	}
 

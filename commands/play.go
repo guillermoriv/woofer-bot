@@ -120,9 +120,6 @@ func PlayHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	playerGuild.Playing = true
-	playerGuild.Mutex.Unlock()
-
 	var vc *discordgo.VoiceConnection
 
 	if playerGuild.VoiceConn == nil {
@@ -202,7 +199,7 @@ func PlayHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				},
 			})
 
-			err := streamAudio(vc, track.AudioURL)
+			err := streamAudio(ctx, vc, track.AudioURL)
 
 			playerGuild.Mutex.Lock()
 			playerGuild.Queue.Remove(element)
@@ -253,7 +250,7 @@ func getAudioURLAndInfo(query string) (*music.Track, error) {
 	return &music.Track{AudioURL: best.URL, Title: entry.Title, Duration: entry.Duration}, nil
 }
 
-func streamAudio(vc *discordgo.VoiceConnection, audioURL string) error {
+func streamAudio(ctx context.Context, vc *discordgo.VoiceConnection, audioURL string) error {
 	const sampleRate = 48000
 	const frameSize = 960
 	const channels = 2
@@ -285,34 +282,41 @@ func streamAudio(vc *discordgo.VoiceConnection, audioURL string) error {
 	buf := make([]byte, frameBytes)
 	opusBuf := make([]byte, 1000) // reuse buffer every iteration
 
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
-		_, err := io.ReadFull(stdout, buf)
-		if err != nil {
-			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				break
-			}
-			log.Println("[error] reading ffmpeg stdout:", err)
-			break
-		}
-
-		samples := bytesToInt16Samples(buf)
-
-		n, err := encoder.Encode(samples, opusBuf)
-		if err != nil {
-			log.Println("[error] encoding opus:", err)
-			break
-		}
-
 		select {
-		case vc.OpusSend <- opusBuf[:n]:
+		case <-ctx.Done():
+			_ = cmd.Process.Kill()
+			log.Println("[info]: ffmpeg process killed due to cancellation")
+			return nil
 		default:
-			log.Println("[warn] dropped frame (OpusSend blocked)")
+			_, err := io.ReadFull(stdout, buf)
+			if err != nil {
+				if err == io.EOF || err == io.ErrUnexpectedEOF {
+					return nil
+				}
+				log.Println("[error] reading ffmpeg stdout:", err)
+				return err
+			}
+
+			samples := bytesToInt16Samples(buf)
+			n, err := encoder.Encode(samples, opusBuf)
+			if err != nil {
+				log.Println("[error] encoding opus:", err)
+				return err
+			}
+
+			select {
+			case vc.OpusSend <- opusBuf[:n]:
+			default:
+				log.Println("[warn] dropped frame (OpusSend blocked)")
+			}
+
+			<-ticker.C
 		}
-
-		time.Sleep(20 * time.Millisecond)
 	}
-
-	return cmd.Wait()
 }
 
 func bytesToInt16Samples(buf []byte) []int16 {
