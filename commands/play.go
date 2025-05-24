@@ -149,7 +149,7 @@ func PlayHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				break
 			}
 
-			err := playerGuild.StreamAudio(vc)
+			err := playerGuild.StreamAudio()
 			if err != nil {
 				log.Println("[error]: streamAudio failed: ", err)
 			}

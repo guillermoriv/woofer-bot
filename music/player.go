@@ -125,10 +125,20 @@ func (p *GuildMusicPlayer) Stop() {
 	defer p.Mutex.Unlock()
 
 	p.Queue.Init()
-	p.NowPlaying.TrackCancel()
+	if p.NowPlaying.TrackCancel != nil {
+		p.NowPlaying.TrackCancel()
+	}
 }
 
-func (p *GuildMusicPlayer) StreamAudio(vc *discordgo.VoiceConnection) error {
+func (p *GuildMusicPlayer) StreamAudio() error {
+	if p.VoiceConn == nil {
+		return errors.New("not voice connection available to play")
+	}
+
+	if p.NowPlaying == nil {
+		return errors.New("no song playing right now")
+	}
+
 	cmd := exec.CommandContext(p.NowPlaying.TrackCtx, "ffmpeg", "-i", p.NowPlaying.AudioURL,
 		"-filter:a", "volume=1.5",
 		"-f", "s16le", "-ar", fmt.Sprintf("%d", sampleRate), "-ac", fmt.Sprintf("%d", channels), "pipe:1")
@@ -177,7 +187,7 @@ func (p *GuildMusicPlayer) StreamAudio(vc *discordgo.VoiceConnection) error {
 			}
 
 			select {
-			case vc.OpusSend <- opusBuf[:n]:
+			case p.VoiceConn.OpusSend <- opusBuf[:n]:
 			default:
 				log.Println("[warn] dropped frame (OpusSend blocked) check out logs")
 			}
@@ -185,14 +195,6 @@ func (p *GuildMusicPlayer) StreamAudio(vc *discordgo.VoiceConnection) error {
 
 		<-ticker.C
 	}
-}
-
-func bytesToInt16Samples(buf []byte) []int16 {
-	samples := make([]int16, len(buf)/2)
-	for i := range samples {
-		samples[i] = int16(binary.LittleEndian.Uint16(buf[i*2 : i*2+2]))
-	}
-	return samples
 }
 
 func (p *GuildMusicPlayer) GetAudioURLAndInfo(query string) (*Track, error) {
@@ -231,4 +233,12 @@ func (p *GuildMusicPlayer) GetAudioURLAndInfo(query string) (*Track, error) {
 	trackCtx, trackCancel := context.WithCancel(context.Background())
 
 	return &Track{AudioURL: best.URL, Title: entry.Title, Duration: entry.Duration, TrackCtx: trackCtx, TrackCancel: trackCancel}, nil
+}
+
+func bytesToInt16Samples(buf []byte) []int16 {
+	samples := make([]int16, len(buf)/2)
+	for i := range samples {
+		samples[i] = int16(binary.LittleEndian.Uint16(buf[i*2 : i*2+2]))
+	}
+	return samples
 }
